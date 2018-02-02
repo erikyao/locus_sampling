@@ -22,13 +22,13 @@ def avg_rank_func(y, y_pred, groups=None, pos_label=1, method="min", exclude_lon
     >>> avg_rank(y, y_pred, groups)
     1.5
 
-    :param y: array of shape (n_samples,) or Series of the same shape with group IDs as index.
+    :param y: pd.Series of length n_samples, with original index from label column or array of shape (n_samples,).
               The ground-true labels.
     :param y_pred: array of shape (n_samples,) or (n_samples, n_classes).
                    The predicted probabilities
     :param groups: array of shape (n_samples,).
                    The group ID for each label.
-                   If None or not matching y's dimensions, use `y.index.values` instead.
+                   If it does not match y's dimensions, subset by `y.index.values`.
                    (This is an ugly hack because I cannot get `groups[train_index]` or
                    `groups[test_index]` in cross validation)
     :param pos_label: int or str. The TRUE label in y
@@ -43,11 +43,16 @@ def avg_rank_func(y, y_pred, groups=None, pos_label=1, method="min", exclude_lon
         raise ValueError("y_pred should be an array of shape (n_samples,) "
                          "or (n_samples, n_classes), got a %d-D array" % y_pred.ndim)
 
-    if (groups is None) or (len(groups) != len(y)):
+    if groups is None:
+        raise ValueError("The 'groups' parameter should not be None.")
+
+    # It's possible that `groups` contains group IDs for all cases
+    #   while `y` is only a sequence of labels of a fold
+    if len(groups) > len(y):
         try:
-            groups = y.index.values
+            groups = groups[y.index.values]
         except AttributeError as ae:
-            raise AttributeError("Resetting groups from y's index values. However y has no index.") from ae
+            raise AttributeError("Subsetting groups from y's index values. However y has no index.") from ae
 
     if isinstance(y, pd.Series):
         y = y.values.ravel()
