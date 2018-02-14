@@ -26,7 +26,7 @@ def avg_rank_func(y, y_pred, groups=None, pos_label=1, method="min", exclude_lon
               The ground-true labels.
     :param y_pred: array of shape (n_samples,) or (n_samples, n_classes).
                    The predicted probabilities
-    :param groups: array of shape (n_samples,).
+    :param groups: pd.Series of length n_samples, with original index from label column or array of shape (n_samples,).
                    The group ID for each label.
                    If it does not match y's dimensions, subset by `y.index.values`.
                    (This is an ugly hack because I cannot get `groups[train_index]` or
