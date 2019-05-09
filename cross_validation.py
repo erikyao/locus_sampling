@@ -265,3 +265,81 @@ class BalancedGroupKFold(BaseCrossValidator):
         folds = group_to_fold[inverse_index]
         for f in range(self.n_splits):
             yield np.where(folds == f)[0]
+
+
+class FixedReplicatedKFold(BaseCrossValidator):
+    """K-fold iterator variant that simply output partitions recorded in a tsv file.
+
+    Parameters
+    ----------
+    n_splits : int
+        Number of folds. Must match the unique numbers in every column of the input file
+    partition_table: pandas DataFrame
+        A dataframe of parititions with shape (n_examples, n_replications)
+    repli_colname : str
+        A string indicating which replication column of the paritition to read
+    
+
+    Partition Table Format
+    ----------------------
+    A 2-replication 3-fold partition table will have contents like:
+
+        name  replication_1  replication_2
+        rs10  1              2
+        rs11  2              3
+        rs12  3              1
+
+    In this case: 
+
+    * n_splits == 3
+    * repli_colname == "replication_1" or "replication_2"
+
+
+    See also
+    --------
+    sklearn.model_selection.StratifiedKFold
+        Takes group information into account to avoid building folds with
+        imbalanced class distributions (for binary or multiclass
+        classification tasks).
+
+    sklearn.model_selection.GroupKFold: K-fold iterator variant with non-overlapping groups.
+    """
+    def __init__(self, n_splits, partition_table, repli_colname):
+        if not isinstance(n_splits, numbers.Integral):
+            raise ValueError('The number of folds must be of Integral type. %s of type %s was passed.'
+                             % (n_splits, type(n_splits)))
+        n_splits = int(n_splits)
+
+        if n_splits <= 1:
+            raise ValueError("k-fold cross-validation requires at least one train/test split "
+                             "by setting n_splits=2 or more, got n_splits={0}.".format(n_splits))
+
+        if repli_colname not in partition_table.columns:
+            raise ValueError("No column named '{}' in the input partition table.".format(repli_colname))
+
+        fold_assignments = partition_table.loc[:, repli_colname]
+        fold_ids = sorted(fold_assignments.unique())
+
+        if len(fold_ids) != n_splits:
+            raise ValueError("Got {} fold IDs. Cannot partition with n_splits={}.".format(len(fold_ids), n_splits))
+
+        self.n_splits = n_splits
+        
+        self.fold_assignments = fold_assignments
+        self.fold_ids = fold_ids
+
+    def get_n_splits(self, X=None, y=None, groups=None):
+        return self.n_splits
+
+    def _iter_test_indices(self, X=None, y=None, groups=None):
+        # ----- Part 1: Check Conditions ----- #
+
+        if len(self.fold_assignments) != len(X.index):
+            raise ValueError("Incompatible dimensions. Got len(self.fold_assignments) = %d and"
+                             " len(X.index) = %d."
+                             % (len(self.fold_assignments), len(X.index)))
+
+        # ----- Part 2: Yield Folds ----- #
+        for _id in self.fold_ids:
+            yield np.where(self.fold_assignments == _id)[0]
+
