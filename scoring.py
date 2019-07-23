@@ -68,7 +68,7 @@ def avg_rank_func(y, y_pred, groups=None, pos_label=1, method="average", exclude
     pos_dim = np.where(labels == pos_label)[0]
 
     # If y_pred is of shape (n_samples, n_classes), pick the probs of positive predictions
-    if y_pred.shape[1] == 2:
+    if y_pred.ndim == 2 and y_pred.shape[1] == 2:
         """
         E.g.
 
@@ -254,7 +254,7 @@ def avg_rank_func2(y, y_pred, groups=None, pos_label=1, method="average"):
     pos_dim = np.where(labels == pos_label)[0]
 
     # If y_pred is of shape (n_samples, n_classes), pick the probs of positive predictions
-    if y_pred.shape[1] == 2:
+    if y_pred.ndim == 2 and y_pred.shape[1] == 2:
         """
         E.g.
 
